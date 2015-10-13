@@ -33,23 +33,23 @@ public class Sensor {
     private String table;
 
     
-
     public Sensor(String name, String unit, String table) {
         setName(name);
         convertAndSetUnit(unit);
         setTable(table);
     }
     
-    public Sensor(String name, Integer unit, String table) {
+   /* public Sensor(String name, Integer unit, String table) {
         setName(name);
         convertAndSetUnit(unit);
         setTable(table);
-    }
+    }*/
 
     
     public String getTable(){
         return table;
     }
+    
     public void setTable(String table){
         this.table = table;     
     }
@@ -70,7 +70,7 @@ public class Sensor {
         this.prefix = prefix;
     }
 
-    public String getUnitSymbol() {
+    public String getSymbol() {
         return symbol;
     }
 
@@ -88,13 +88,13 @@ public class Sensor {
     
     public String convertAndSetUnit(String wiotechUnitNumber){
         switch(wiotechUnitNumber){
-            case "1":
-                this.setUnit("\u00b0");
+            case "1": //°C
+                this.setUnit("\u00b0C");
                 return this.getUnit();
-            case "6":
+            case "6"://%
                 this.setUnit("\u2030");
                 return  this.getUnit();
-            case "9":
+            case "9":// ‰
                 this.setUnit("\u0025");
                 return this.getUnit();    
                 
@@ -103,7 +103,7 @@ public class Sensor {
         }
         
     }
-    public String convertAndSetUnit(Integer wiotechUnitNumber){
+  /*  public String convertAndSetUnit(Integer wiotechUnitNumber){
         switch(wiotechUnitNumber){
             case 1:
                 this.setUnit("\u00b0C");
@@ -119,5 +119,5 @@ public class Sensor {
                 return null;
         }
         
-    }
+    }*/
 }
