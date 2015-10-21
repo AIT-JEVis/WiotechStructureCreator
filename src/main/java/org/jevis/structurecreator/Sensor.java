@@ -37,6 +37,7 @@ public class Sensor {
         setName(name);
         convertAndSetUnit(unit);
         setTable(table);
+        
     }
     
    /* public Sensor(String name, Integer unit, String table) {
@@ -58,7 +59,8 @@ public class Sensor {
         return name;
     }
 
-    public void setName(String name) {
+    private void setName(String name) {
+
         this.name = name;
     }
 
@@ -89,12 +91,15 @@ public class Sensor {
     public String convertAndSetUnit(String wiotechUnitNumber){
         switch(wiotechUnitNumber){
             case "1": //°C
+                this.name+="_Temp";
                 this.setUnit("\u00b0C");
                 return this.getUnit();
             case "6"://%
-                this.setUnit("\u2030");
+                this.name+="_rH";
+                this.setUnit("\u0025");
                 return  this.getUnit();
             case "9":// ‰
+                this.name+="_CO2";
                 this.setUnit("\u0025");
                 return this.getUnit();    
                 
@@ -103,21 +108,5 @@ public class Sensor {
         }
         
     }
-  /*  public String convertAndSetUnit(Integer wiotechUnitNumber){
-        switch(wiotechUnitNumber){
-            case 1:
-                this.setUnit("\u00b0C");
-                return this.getUnit();
-            case 6:
-                this.setUnit("\u2030");
-                return  this.getUnit();
-            case 9:
-                this.setUnit("\u0025");
-                return this.getUnit();    
-                
-            default:
-                return null;
-        }
-        
-    }*/
+
 }

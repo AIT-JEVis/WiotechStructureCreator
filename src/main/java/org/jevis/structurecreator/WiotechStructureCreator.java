@@ -102,8 +102,8 @@ public class WiotechStructureCreator {
      */
     public static void main(String[] args){
         WiotechStructureCreator wsc = new WiotechStructureCreator("10.8.4.123", 3306, "db_lm_cbv2", "jevis", "jevistest");
-        wsc.connectToJEVis("localhost", "3306", "jevis", "jevis", "jevistest", "Wiotech", "wiotech");
-        wsc.createStructure(3959l);
+        wsc.connectToJEVis("localhost", "3306", "jevis", "jevis", "jevistest", "Sys Admin", "jevis");
+        wsc.createStructure(3949l);
     }
     
     /**
@@ -117,30 +117,41 @@ public class WiotechStructureCreator {
      */
     public void createStructure(long buildingId){
         
-        JEVisObject dsd =createObject(buildingId, "Data Source Directory", "Data Source Directory");
+        ObjectAndBoolean dsd =createObjectCheckNameExistance(buildingId, "Data Source Directory", "Data Source Directory");
              
-        JEVisObject mysqlServer = createObject(dsd.getID(), "MySQL Server", "MySQL Server");
-        writeToJEVis(mysqlServer.getID(), "Schema", _schema);
-        writeToJEVis(mysqlServer.getID(), "User", _dbUser);
-        writeToJEVis(mysqlServer.getID(), "Port", _port);
-        writeToJEVis(mysqlServer.getID(), "Host", _host);
-        writeToJEVis(mysqlServer.getID(), "Password", _dbPW);
+        ObjectAndBoolean mysqlServer = createObjectCheckNameExistance(dsd.getJEVisObject().getID(), "MySQL Server", "MySQL Server");
             
-        JEVisObject dataDirectory = createObject(buildingId, "Data Directory", "Data Directory");
+            if(mysqlServer.isNew){
+                long id = mysqlServer.getJEVisObject().getID();
+                writeToJEVis(id, "Schema", _schema);
+                writeToJEVis(id, "User", _dbUser);
+                writeToJEVis(id, "Port", _port);
+                writeToJEVis(id, "Host", _host);
+                writeToJEVis(id, "Password", _dbPW);
+                writeToJEVis(id, "Enabled", true);
+            }
+            
+        ObjectAndBoolean dataDirectory = createObjectCheckNameExistance(buildingId, "Data Directory", "Data Directory");
             
         for(Sensor sensor : _result){
-            JEVisObject sqlChannelDir = createObject(mysqlServer.getID(),"SQL Channel Directory", sensor.getName());
-            JEVisObject channel = createObject(sqlChannelDir.getID(),"SQL Channel", "SQL Channel");
-            writeToJEVis(channel.getID(), "Column Timestamp", "time");
-            writeToJEVis(channel.getID(), "Column Value", "value");
-            writeToJEVis(channel.getID(), "Table",sensor.getTable());
-            writeToJEVis(channel.getID(), "Timestamp Format", "yyyy-MM-dd HH:mm:ss.s");
+            ObjectAndBoolean sqlChannelDir = createObjectCheckNameExistance(mysqlServer.getJEVisObject().getID(),"SQL Channel Directory", sensor.getName());
+            ObjectAndBoolean channel = createObjectCheckNameExistance(sqlChannelDir.getJEVisObject().getID(),"SQL Channel", "SQL Channel");
+                if(channel.isNew){
+                    long id = channel.getJEVisObject().getID();
+                           
+                    writeToJEVis(id, "Column Timestamp", "time");
+                    writeToJEVis(id, "Column Value", "value");
+                    writeToJEVis(id, "Table",sensor.getTable());
+                    writeToJEVis(id, "Timestamp Format", "yyyy-MM-dd HH:mm:ss.s");
+                }
                 
-            JEVisObject sqlDPD = createObject(channel.getID(), "SQL Data Point Directory", "DPD");
-            JEVisObject sqlDP = createObject(sqlDPD.getID(), "SQL Data Point", "DP");
-            JEVisObject data = createObject(dataDirectory.getID(), "Data", sensor.getName());
-            writeToJEVis(sqlDP.getID(), "Target", data.getID().toString());
-        }        
+            ObjectAndBoolean sqlDPD = createObjectCheckNameExistance(channel.getJEVisObject().getID(), "SQL Data Point Directory", "DPD");
+            ObjectAndBoolean sqlDP = createObjectCheckNameExistance(sqlDPD.getJEVisObject().getID(), "SQL Data Point", "DP");
+            ObjectAndBoolean data = createObjectCheckNameExistance(dataDirectory.getJEVisObject().getID(), "Data", sensor.getName());
+            if(data.isNew){
+                writeToJEVis(sqlDP.getJEVisObject().getID(), "Target", data.getJEVisObject().getID().toString());
+            }
+        }
     }
     
     /**
@@ -244,6 +255,42 @@ public class WiotechStructureCreator {
         return newObject;
     }
     
+    
+    private static ObjectAndBoolean createObjectCheckNameExistance(long parentObjectID, String newObjectClass, String newObjectName) {
+        JEVisObject newObject = null;
+        try {
+            //Check if the connection is still alive. An JEVisException will be
+            //thrown if you use one of the functions and the connection is lost
+            if (jevis.isConnectionAlive()) {
+
+                //Get the ParentObject from the JEVis system
+                if (jevis.getObject(parentObjectID) != null) {
+
+                    JEVisObject parentObject = jevis.getObject(parentObjectID);
+
+                    List<JEVisObject> children = parentObject.getChildren();
+                    
+                    for(JEVisObject child : children){
+                        
+                        if(child.getName().equals(newObjectName)){
+                            return new ObjectAndBoolean(child, false);
+                        }  
+                    }
+
+                } else {
+                    Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, "Cannot create Object because the parent is not accessible");
+                }
+
+            } else {
+                Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, "Connection to the JEVisServer is not alive");
+            }
+
+        } catch (JEVisException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return new ObjectAndBoolean(createObject(parentObjectID, newObjectClass, newObjectName), true);
+    }
+    
     /**
      * 
      * Connect to JEVis
@@ -330,5 +377,34 @@ public class WiotechStructureCreator {
         } catch (JEVisException ex) {
             Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    private static class ObjectAndBoolean{
+        
+        private boolean isNew;
+        private JEVisObject jeObject;
+
+        public ObjectAndBoolean(JEVisObject jeObject,boolean isNew ) {
+            this.jeObject = jeObject;
+            this.isNew = isNew;
+        }
+        
+        
+       /* public void setBoolean(boolean isNew){
+            this.isNew = isNew;
+        }
+        
+        public void setJEVisObject(JEVisObject jeObject){
+            this.jeObject = jeObject;
+        }*/
+        
+        public boolean getBoolean(){
+            return this.isNew;
+        }
+        
+        public JEVisObject getJEVisObject(){
+            return this.jeObject;
+        }
+        
     }
 }
