@@ -91,15 +91,15 @@ public class Sensor {
     public String convertAndSetUnit(String wiotechUnitNumber){
         switch(wiotechUnitNumber){
             case "1": //°C
-                this.name+="_Temp";
+                this.symbol="Temp";
                 this.setUnit("\u00b0C");
                 return this.getUnit();
             case "6"://%
-                this.name+="_rH";
+                this.symbol="CO2";
                 this.setUnit("\u0025");
                 return  this.getUnit();
             case "9":// ‰
-                this.name+="_CO2";
+                this.symbol="rH";
                 this.setUnit("\u0025");
                 return this.getUnit();    
                 

@@ -33,13 +33,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.measure.unit.Unit;
 import org.jevis.api.JEVisAttribute;
 import org.jevis.api.JEVisClass;
 import org.jevis.api.JEVisDataSource;
 import org.jevis.api.JEVisException;
 import org.jevis.api.JEVisObject;
 import org.jevis.api.JEVisSample;
+import org.jevis.api.JEVisUnit;
 import org.jevis.api.sql.JEVisDataSourceSQL;
+import org.jevis.commons.unit.JEVisUnitImp;
 import org.joda.time.DateTime;
 
 
@@ -101,9 +104,15 @@ public class WiotechStructureCreator {
      * @param args not used
      */
     public static void main(String[] args){
-        WiotechStructureCreator wsc = new WiotechStructureCreator("10.8.4.123", 3306, "db_lm_cbv2", "jevis", "jevistest");
+        
+        Long buildingID = Long.parseLong(args[0]);
+        String localManagerIP = args [1];
+        String dbUser = args[2];
+        String dbPwd = args [3];
+        
+        WiotechStructureCreator wsc = new WiotechStructureCreator(localManagerIP, 3306, "db_lm_cbv2", dbUser, dbPwd);
         wsc.connectToJEVis("localhost", "3306", "jevis", "jevis", "jevistest", "Sys Admin", "jevis");
-        wsc.createStructure(3949l);
+        wsc.createStructure(buildingID);
     }
     
     /**
@@ -134,7 +143,7 @@ public class WiotechStructureCreator {
         ObjectAndBoolean dataDirectory = createObjectCheckNameExistance(buildingId, "Data Directory", "Data Directory");
             
         for(Sensor sensor : _result){
-            ObjectAndBoolean sqlChannelDir = createObjectCheckNameExistance(mysqlServer.getJEVisObject().getID(),"SQL Channel Directory", sensor.getName());
+            ObjectAndBoolean sqlChannelDir = createObjectCheckNameExistance(mysqlServer.getJEVisObject().getID(),"SQL Channel Directory", sensor.getName()+"_"+sensor.getSymbol());
             ObjectAndBoolean channel = createObjectCheckNameExistance(sqlChannelDir.getJEVisObject().getID(),"SQL Channel", "SQL Channel");
                 if(channel.isNew){
                     long id = channel.getJEVisObject().getID();
@@ -147,7 +156,18 @@ public class WiotechStructureCreator {
                 
             ObjectAndBoolean sqlDPD = createObjectCheckNameExistance(channel.getJEVisObject().getID(), "SQL Data Point Directory", "DPD");
             ObjectAndBoolean sqlDP = createObjectCheckNameExistance(sqlDPD.getJEVisObject().getID(), "SQL Data Point", "DP");
-            ObjectAndBoolean data = createObjectCheckNameExistance(dataDirectory.getJEVisObject().getID(), "Data", sensor.getName());
+            ObjectAndBoolean device = createObjectCheckNameExistance(dataDirectory.getJEVisObject().getID(), "Device", sensor.getName());
+            ObjectAndBoolean data = createObjectCheckNameExistance(device.getJEVisObject().getID(), "Data", sensor.getSymbol());
+            
+            try {
+                JEVisAttribute  attributeValue = data.getJEVisObject().getAttribute("Value");
+                attributeValue.setDisplayUnit(new JEVisUnitImp(Unit.valueOf(sensor.getUnit()), "", JEVisUnit.Prefix.NONE));
+                attributeValue.setInputUnit(new JEVisUnitImp(Unit.valueOf(sensor.getUnit()), "", JEVisUnit.Prefix.NONE));
+                attributeValue.commit();
+            } catch (JEVisException ex) {
+                Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
             if(data.isNew){
                 writeToJEVis(sqlDP.getJEVisObject().getID(), "Target", data.getJEVisObject().getID().toString());
             }
