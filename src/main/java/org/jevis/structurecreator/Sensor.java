@@ -27,33 +27,28 @@ package org.jevis.structurecreator;
 public class Sensor {
 
     private String name;
-    private String prefix;
+    //private String prefix;
     private String symbol;
     private String unit;
     private String table;
+    private String mac;
 
     
-    public Sensor(String name, String unit, String table) {
-        setName(name);
-        convertAndSetUnit(unit);
-        setTable(table);
+    public Sensor(String wiotechSensorableName) {
+        
+        String[] sensorDetails = wiotechSensorableName.split("_");
+        this.unit = convertAndSetUnit(sensorDetails[2]);
+        this.mac = sensorDetails[1];
+        this.table = wiotechSensorableName;
+        this.name = mac;
         
     }
-    
-   /* public Sensor(String name, Integer unit, String table) {
-        setName(name);
-        convertAndSetUnit(unit);
-        setTable(table);
-    }*/
-
-    
+   
     public String getTable(){
         return table;
     }
     
-    public void setTable(String table){
-        this.table = table;     
-    }
+
 
     public String getName() {
         return name;
@@ -64,13 +59,13 @@ public class Sensor {
         this.name = name;
     }
 
-    public String getPrefix() {
+    /*public String getPrefix() {
         return prefix;
     }
 
     public void setPrefix(String prefix) {
         this.prefix = prefix;
-    }
+    }*/
 
     public String getSymbol() {
         return symbol;
@@ -84,23 +79,19 @@ public class Sensor {
         return unit;
     }
 
-    private void setUnit(String sensorUnit) {
-        this.unit = sensorUnit;
-    }
-    
-    public String convertAndSetUnit(String wiotechUnitNumber){
+    private String convertAndSetUnit(String wiotechUnitNumber){
         switch(wiotechUnitNumber){
             case "1": //°C
                 this.symbol="Temp";
-                this.setUnit("\u00b0C");
+                this.unit = "\u00b0C";
                 return this.getUnit();
             case "6"://%
                 this.symbol="CO2";
-                this.setUnit("\u0025");
+                this.unit = "\u0025";
                 return  this.getUnit();
             case "9":// ‰
                 this.symbol="rH";
-                this.setUnit("\u0025");
+                this.unit = "\u0025";
                 return this.getUnit();    
                 
             default:
@@ -109,4 +100,10 @@ public class Sensor {
         
     }
 
+    /**
+     * @return the mac
+     */
+    public String getMac() {
+        return mac;
+    }
 }

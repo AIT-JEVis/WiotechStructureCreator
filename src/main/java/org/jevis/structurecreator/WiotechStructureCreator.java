@@ -24,6 +24,7 @@
 
 package org.jevis.structurecreator;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -110,7 +111,9 @@ public class WiotechStructureCreator {
         String dbUser = args[2];
         String dbPwd = args [3];
         
+        
         WiotechStructureCreator wsc = new WiotechStructureCreator(localManagerIP, 3306, "db_lm_cbv2", dbUser, dbPwd);
+        //wsc.backupSensorData("db_lm_cbv2", dbUser, dbPwd);
         wsc.connectToJEVis("localhost", "3306", "jevis", "jevis", "jevistest", "Sys Admin", "jevis");
         wsc.createStructure(buildingID);
     }
@@ -143,7 +146,8 @@ public class WiotechStructureCreator {
         ObjectAndBoolean dataDirectory = createObjectCheckNameExistance(buildingId, "Data Directory", "Data Directory");
             
         for(Sensor sensor : _result){
-            ObjectAndBoolean sqlChannelDir = createObjectCheckNameExistance(mysqlServer.getJEVisObject().getID(),"SQL Channel Directory", sensor.getName()+"_"+sensor.getSymbol());
+            ObjectAndBoolean sqlChannelDir = createObjectCheckNameExistance(mysqlServer.getJEVisObject().getID(),
+                    "SQL Channel Directory", sensor.getName()+"_"+sensor.getSymbol());
             ObjectAndBoolean channel = createObjectCheckNameExistance(sqlChannelDir.getJEVisObject().getID(),"SQL Channel", "SQL Channel");
                 if(channel.isNew){
                     long id = channel.getJEVisObject().getID();
@@ -157,6 +161,10 @@ public class WiotechStructureCreator {
             ObjectAndBoolean sqlDPD = createObjectCheckNameExistance(channel.getJEVisObject().getID(), "SQL Data Point Directory", "DPD");
             ObjectAndBoolean sqlDP = createObjectCheckNameExistance(sqlDPD.getJEVisObject().getID(), "SQL Data Point", "DP");
             ObjectAndBoolean device = createObjectCheckNameExistance(dataDirectory.getJEVisObject().getID(), "Device", sensor.getName());
+            if(device.isNew){
+                long id =device.getJEVisObject().getID();
+                writeToJEVis(id, "MAC",sensor.getName());
+            }
             ObjectAndBoolean data = createObjectCheckNameExistance(device.getJEVisObject().getID(), "Data", sensor.getSymbol());
             
             try {
@@ -193,16 +201,38 @@ public class WiotechStructureCreator {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 if(rs.getString(3)!=null){
-                    String[] sensorDetails = rs.getString(3).split("_");
-                    boolean add = _result.add(new Sensor(sensorDetails[1], sensorDetails[2], rs.getString(3)));
+                    String sensorDetails = rs.getString(3);
+                    
+                    boolean add = _result.add(new Sensor(sensorDetails));
                 }
             }
             
         } catch (SQLException ex) {
             java.util.logging.Logger.getLogger(WiotechStructureCreator.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-            return;
+        
         }
         
+    }
+    
+    
+    private void backupSensorData(String dbName, String dbUser, String dbPassword) {
+ 
+        try {
+            String executeCmd = "";
+            executeCmd = "mysqldump -u "+dbUser + " -p"+dbPassword + " "+dbName + " -r ";
+            
+            Process runtimeProcess =Runtime.getRuntime().exec(executeCmd);
+            int processComplete = runtimeProcess.waitFor();
+            if(processComplete == 0){
+                System.out.println("Backup taken successfully");
+            } else {
+                System.out.println("Could not take mysql backup");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     /**
@@ -277,7 +307,7 @@ public class WiotechStructureCreator {
     
     
     private static ObjectAndBoolean createObjectCheckNameExistance(long parentObjectID, String newObjectClass, String newObjectName) {
-        JEVisObject newObject = null;
+        
         try {
             //Check if the connection is still alive. An JEVisException will be
             //thrown if you use one of the functions and the connection is lost
@@ -292,9 +322,17 @@ public class WiotechStructureCreator {
                     
                     for(JEVisObject child : children){
                         
-                        if(child.getName().equals(newObjectName)){
-                            return new ObjectAndBoolean(child, false);
-                        }  
+
+                        try{
+                            String mac = child.getAttribute("MAC").getLatestSample().getValueAsString();
+                            if(mac.equals(newObjectName)){
+                                return new ObjectAndBoolean(child, false);
+                            } 
+                        }catch(NullPointerException ex){
+                            if(child.getName().equals(newObjectName)){
+                                return new ObjectAndBoolean(child, false);
+                            } 
+                        }
                     }
 
                 } else {
