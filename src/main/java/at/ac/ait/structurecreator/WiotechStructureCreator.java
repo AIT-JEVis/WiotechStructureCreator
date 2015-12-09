@@ -22,9 +22,15 @@
  * 
  */
 
-package org.jevis.structurecreator;
+package at.ac.ait.structurecreator;
 
+import org.jevis.structurecreator.Sensor;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -99,6 +105,27 @@ public class WiotechStructureCreator {
         getSensorDetails();
     }
     
+    
+    
+    public WiotechStructureCreator(String host, Integer port, String schema, String dbUser, String dbPW, String filePath) {
+        
+        this._host = host;
+        this._port = port;
+        this._schema = schema;
+        this._dbUser = dbUser;
+        this._dbPW = dbPW;
+        try {
+            String url = loadJDBC(_host, _port, _schema, _dbUser, _dbPW);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        getSensorDetails();
+        saveSenorDetails(filePath);
+    }
+    
      /**
      * Example how to use WiotechStructureCreator
      *
@@ -116,6 +143,7 @@ public class WiotechStructureCreator {
         //wsc.backupSensorData("db_lm_cbv2", dbUser, dbPwd);
         wsc.connectToJEVis("localhost", "3306", "jevis", "jevis", "jevistest", "Sys Admin", "jevis");
         wsc.createStructure(buildingID);
+        Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.INFO, "Structure created sucessfully");
     }
     
     /**
@@ -255,6 +283,56 @@ public class WiotechStructureCreator {
         return url;
     }
     
+    public void readSensorDetails(String path){
+
+        FileInputStream fis = null;
+        try {
+            fis = new FileInputStream("t.tmp");
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            _result = (ArrayList<Sensor>) ois.readObject();
+            
+            ois.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                fis.close();
+            } catch (IOException ex) {
+                Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        
+    }
+    
+    private Boolean saveSenorDetails(String path){
+        FileOutputStream fos = null;
+        Boolean fileSaved = true;
+        try {
+            fos = new FileOutputStream(path);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(_result);
+            oos.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+            fileSaved = false;
+        } catch (IOException ex) {
+            Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+            fileSaved = false;
+        } finally {
+            try {
+                fos.close();
+            } catch (IOException ex) {
+                Logger.getLogger(WiotechStructureCreator.class.getName()).log(Level.SEVERE, null, ex);
+                fileSaved = false;
+            }
+        }
+        return fileSaved;
+    }
      /**
      * Create an new JEVisObject on the JEVis Server.
      *

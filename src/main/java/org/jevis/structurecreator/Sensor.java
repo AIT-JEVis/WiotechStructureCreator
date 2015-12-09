@@ -20,12 +20,15 @@
  */
 package org.jevis.structurecreator;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Werner Lamprecht <werner.lamprecht@ymail.com>
  */
-public class Sensor {
+public class Sensor implements Serializable{
 
+    private static final long serialVersionUID = 6659106543797L;
     private String name;
     //private String prefix;
     private String symbol;
